@@ -1,0 +1,245 @@
+  1 #include <stdio.h>
+  2 #include <stdlib.h>
+  3 typedef struct{
+  4     unsigned char s;
+  5     unsigned int w[8];
+  6 }sint256_t;//w[7]--w[0]순서s에는 '+'나 '-', 0은 +0으로 취급
+  7 int add256(sint256_t*,const sint256_t*,const sint256_t*);
+  8 int sub256(sint256_t*,const sint256_t*,const sint256_t*);
+  9 int mul256(sint256_t*,const sint256_t*,const sint256_t*);
+ 10 int cmp256(const sint256_t*,const sint256_t*);
+ 11 void add(sint256_t*,const sint256_t*,const sint256_t*);//부호상관없이 덧셈
+ 12 void sub(sint256_t*,const sint256_t*,const sint256_t*);//부호상관없이 큰 값에서 작은 값 뺼뺄셈
+ 13 void mul(sint256_t*,const sint256_t*,const sint256_t*); //부호상관 없이 연산값 저장
+ 14 int cmp(const sint256_t*,const sint256_t*);//부호상관없이 크기비교 op1이 op2보다 크면1 같으면0 작으면 -1
+ 15 unsigned int min(unsigned int ,unsigned int);
+ 16 int main(){
+ 17
+ 18     sint256_t *q=(sint256_t*)malloc(sizeof(sint256_t));
+ 19     sint256_t *e=(sint256_t*)malloc(sizeof(sint256_t));
+ 20     sint256_t *w=(sint256_t*)malloc(sizeof(sint256_t));
+ 21     sint256_t *r=(sint256_t*)malloc(sizeof(sint256_t));
+ 22
+ 23     printf("점은 4294967296 승입니다.\n");
+ 24
+ 25     q->s='+';
+ 26     q->w[0]=1;
+ 27     q->w[1]=1;
+ 28     q->w[2]=1;
+ 29     q->w[3]=1;
+ 30     q->w[4]=1;
+ 31     q->w[5]=1;
+ 32     q->w[6]=1;
+ 33     q->w[7]=1;
+ 34     printf("op1=%c",q->s);
+ 35     for(int i=7;i>-1;i--)
+ 36         printf("%010u.",q->w[i]);
+ 37
+ 38     e->s='-';;
+ 39     e->w[0]=95;
+ 40     e->w[1]=10;
+ 41     e->w[2]=0;
+ 42     e->w[3]=0;
+ 43     e->w[4]=0;
+ 44     e->w[5]=0;
+ 45     e->w[6]=0;
+ 46     e->w[7]=0;
+ 47
+ 48     printf("\nop2=%c",e->s);
+ 49     for(int i=7;i>-1;i--)
+ 50         printf("%010u.",e->w[i]);
+ 51
+ 52     r->s='+';
+ 53     r->w[0]=95;
+ 54     r->w[1]=105;
+ 55     r->w[2]=105;
+ 56     r->w[3]=105;
+ 57     r->w[4]=105;
+ 58     r->w[5]=105;
+ 59     r->w[6]=105;
+ 60     r->w[7]=105;
+ 61     printf("\nop3=%c",r->s);
+ 62     for(int i=7;i>-1;i--)
+ 63         printf("%010u.",r->w[i]);
+ 64
+ 65     printf("\nop1+op2=");
+ 66
+ 67     if(add256(w,q,e)){
+ 68         printf("%c",w->s);
+ 69         for(int i=7;i>-1;i--)
+ 70             printf("%010u.",w->w[i]);
+ 71     }
+ 72     printf("\nop1-op2=");
+ 73     if(sub256(w,q,e)){
+ 74         printf("%c",w->s);
+ 75         for(int i=7;i>-1;i--)
+ 76             printf("%010u.",w->w[i]);
+ 77     }
+ 78     printf("\nop1*op2=");
+ 79     if(mul256(w,q,e)){
+ 80         printf("%c",w->s);
+ 81         for(int i=7;i>-1;i--)
+ 82             printf("%010u.",w->w[i]);
+ 83     }
+ 84
+ 85     printf("\nop3와 op1*op2 비교 : %d",cmp256(r,w));
+ 86
+ 87
+ 88     printf("\n");
+ 89     return 0;
+ 90 }
+ 91 void add(sint256_t *op3,const sint256_t*op1, const sint256_t* op2){
+ 92     unsigned int test, carry=0;
+ 93
+ 94     for(int i=0;i<8;i++){
+ 95         test=op1->w[i]+op2->w[i]+carry;
+ 96         if(test<min(op1->w[i],op2->w[i]))
+ 97             carry=1;
+ 98         else carry=0;
+ 99         op3->w[i]=test;
+100     }
+101     op3->s='+';//0을 +0으로 취급
+102 }
+103 void sub(sint256_t *op3,const sint256_t* op1,const sint256_t* op2){
+104     unsigned int test,barrow=0;
+105     unsigned int bit=0;
+106
+107     if(cmp(op1,op2)==1){
+108         for(int i=0;i<8;i++){
+109             if(op1->w[i]-barrow>=op2->w[i]){
+110                 test=op1->w[i]-barrow-op2->w[i];
+111                 barrow=0;}
+112             else {
+113                 test=op1->w[i]-barrow-op2->w[i];
+114                 barrow=1;}
+115             op3->w[i]=test;
+116         }
+117         op3->s='+';//op1의 절대값이 더클때
+118     }
+119     else if(cmp (op1,op2)==-1){
+120         for(int i=0;i<8;i++){
+121             if(op2->w[i]-barrow>=op1->w[i]){
+122                 test=op2->w[i]-barrow-op1->w[i];
+123                 barrow=0;
+124             }
+125             else{
+126                 test=op2->w[i]-barrow-op1->w[i];
+127                 barrow=1;
+128             }
+129             op3->w[i]=test;
+130         }
+131         op3->s='-';//op2의 절대값이 더 클 때
+132     }
+133     else{
+134         for(int i=0;i<8;i++)
+135             op3->w[i]=0;
+136         op3->s='0';//op1과op2의 부호가 같을 떄
+137     }
+138  }
+139 void mul(sint256_t *op3,const sint256_t* op1,const sint256_t* op2){
+140     sint256_t* a[8];
+141     for(int i=0;i<8;i++){
+142         a[i]=(sint256_t*)malloc(sizeof(sint256_t));
+143     }
+144
+145     for(int i=0;i<8;i++){
+146         for(int j=0;j<8;j++){
+147             a[i]->w[j]=0;}
+148     }
+149     for(int i=0;i<8;i++){
+150         for(int j=0;j<op2->w[i];j++){
+151             add(a[i],a[i],op1);
+152         }
+153         for(int j=7;j>i-1;j--){
+154             a[i]->w[j]=a[i]->w[j-i];
+155         }
+156         for(int j=0;j<i;j++){
+157             a[i]->w[j]=0;
+158         }
+159     }
+160
+161     for(int i=1;i<8;i++)
+162         add(a[0],a[i],a[0]);
+163
+164     for(int i=0;i<8;i++)
+165         op3->w[i]=a[0]->w[i];
+166 }
+167 int cmp(const sint256_t* op1,const sint256_t* op2){
+168     for(int i=7;i>-1;i--){
+169         if(op1->w[i]>op2->w[i])
+170             return 1;
+171         else if(op1->w[i]<op2->w[i])
+172             return -1;
+173     }
+174     return 0;
+175 }
+176 int add256(sint256_t* result,const sint256_t* op1,const sint256_t* op2){
+177     if(op1->s==op2->s){//부호가 같은 덧셈
+178         add(result,op1,op2);
+179         result->s=op1->s;
+180     }
+181     else if(op1->s=='+'){//+ 더하기 - 연산
+182         sub(result,op1,op2);
+183     }
+184     else{//- 더하기 + 연산
+185         sub(result,op1,op2);
+186         if(result->s=='+')
+187             result->s='-';
+188         else result->s='+';
+189     }
+190
+191     if(result->s=='0')//0은 +0으로 취급
+192         result->s='+';
+193
+194     return 1;
+195 }
+196 int sub256(sint256_t* result,const sint256_t* op1,const sint256_t* op2){
+197
+198     if(op1->s==op2->s){//부호가 같은 뺼셈
+199         if(op1->s=='+')//+ 뺴기 + 연산
+200             sub(result,op1,op2);
+201         else{//- 뺴기 - 연산
+202             sub(result,op1,op2);
+203             if(result->s=='+')
+204                 result->s='-';
+205             else result->s='+';
+206         }
+207     }
+208     else if (op2->s=='-'){
+209         add(result,op1,op2);
+210         result->s=op1->s;
+211     }
+212     else{
+213         add(result,op1,op2);
+214         result->s=op1->s;
+215     }
+216
+217     return 1;
+218 }
+219 int mul256(sint256_t* result,const sint256_t* op1,const sint256_t* op2){
+220     mul(result,op1,op2);
+221
+222     if(op1->s==op2->s)
+223         result->s=op1->s;
+224     else result->s='-';
+225
+226     return 1;
+227 }
+228 int cmp256(const sint256_t* op1,const sint256_t* op2){ //op1이 op2보다 크면 1 같으면 0 작으면 -1출력
+229     if(op1->s==op2->s){
+230         if(op1->s=='+')
+231             return cmp(op1,op2);
+232         else return -cmp(op1,op2);
+233     }
+234     else if(op1->s=='+')
+235         return 1;
+236     else return -1;
+237 }
+238 unsigned int min(unsigned int a,unsigned int b){
+239     unsigned int i;
+240     i=a;
+241     if(i>=b)
+242         i=b;
+243
+244     return i;
+245 }
